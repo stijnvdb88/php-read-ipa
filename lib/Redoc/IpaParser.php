@@ -106,7 +106,8 @@ class IpaParser {
             //unzip ipa, take out Info.plist and *.png
             $imgPattern = "*.png";
             $plistPattern = "Info.plist";       //*.plist
-            $zipCommand = sprintf("%s x %s -aoa -o%s %s %s -r", self::ZIP, $this->ipaFilePath, $this->extractFolder, $imgPattern, $plistPattern);
+            $provisionPattern = "*.mobileprovision";       //*.plist
+            $zipCommand = sprintf("%s x %s -aoa -o%s %s %s %s -r", self::ZIP, $this->ipaFilePath, $this->extractFolder, $imgPattern, $plistPattern, $provisionPattern);
             $this->cmd(self::ZIP, $zipCommand, ZipException::class);
 
             //make sure it is extracted successfully
