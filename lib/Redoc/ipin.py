@@ -39,10 +39,6 @@ def getNormalizedPNG(filename):
     file.close()
 
     if oldPNG[:8] != pngheader:
-        print oldPNG[:4]
-        print "asd"
-        print pngheader
-        print "as2d"
         return None
 
     newPNG = oldPNG[:8]
