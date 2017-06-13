@@ -1,5 +1,5 @@
 {
-    "name": "hoanganh25991/php-read-ipa",
+    "name": "andrewkarpich/php-read-ipa",
     "type": "library",
     "description": "Read basic info about an application from .ipa file.",
     "keywords": ["apk", "parser", "android", "read"],
