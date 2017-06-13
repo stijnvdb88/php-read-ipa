@@ -227,6 +227,10 @@ class IpaParser {
         return $this->provision;
     }
 
+    public function getExtractFolder(){
+        return $this->extractFolder;
+    }
+
     public function getBasicInfo() {
         $info = [];
         $plistArray = $this->plist->toArray();
