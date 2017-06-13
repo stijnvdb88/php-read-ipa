@@ -117,7 +117,7 @@ class IpaParser {
 
             //move *.png to $this->extractFolder
             //becauses move cannot move to itself, move to tmp folder, then move back
-            if (!is_dir(self::OUTPUT_TEMP) && !file_exists(self::OUTPUT_TEMP)) 
+            if (!is_dir(self::OUTPUT_TEMP) && !file_exists(self::OUTPUT_TEMP))
                 mkdir(self::OUTPUT_TEMP, 0744, true);
 
             $dir = scandir($this->extractFolder . DIR_SEP . "Payload");
@@ -142,6 +142,7 @@ class IpaParser {
 
             //PNG files
             $imgFiles = glob($fullAppFolder . DIR_SEP . $imgPattern);
+            $imgFiles = array_merge($imgFiles, glob($this->extractFolder . DIR_SEP . $imgPattern));
             asort($imgFiles);
 
             //Decode largest icon first
@@ -155,16 +156,16 @@ class IpaParser {
                     $i--;
                     continue;
                 }
-                
+
                 //Move the normalized PNG file
                 rename($pngFile, $iconPath);
                 break;
             }
         }
-        
+
         //store plist
         $this->plist = new CFPropertyList($plistPath);;
-        
+
         //store icon
         if (file_exists($iconPath))
             $this->icon = new Icon($iconPath);

@@ -32,25 +32,28 @@ import os
 
 def getNormalizedPNG(filename):
     pngheader = "\x89PNG\r\n\x1a\n"
-    
+
+
     file = open(filename, "rb")
     oldPNG = file.read()
     file.close()
 
     if oldPNG[:8] != pngheader:
+        print oldPNG[:4]
+        print "asd"
+        print pngheader
+        print "as2d"
         return None
-    
+
     newPNG = oldPNG[:8]
-    
+
     chunkPos = len(newPNG)
-    
-    idatAcc = ""
-    breakLoop = False
-    
-    # For each chunk in the PNG file    
+    ptr = 0
+    chunkD = []
+
+    # For each chunk in the PNG file
     while chunkPos < len(oldPNG):
-        skip = False
-        
+
         # Reading chunk
         chunkLength = oldPNG[chunkPos:chunkPos+4]
         chunkLength = unpack(">L", chunkLength)[0]
@@ -60,74 +63,81 @@ def getNormalizedPNG(filename):
         chunkCRC = unpack(">L", chunkCRC)[0]
         chunkPos += chunkLength + 12
 
+
         # Parsing the header chunk
         if chunkType == "IHDR":
             width = unpack(">L", chunkData[0:4])[0]
             height = unpack(">L", chunkData[4:8])[0]
-
-        # Parsing the image chunk
-        if chunkType == "IDAT":
-            # Store the chunk data for later decompression
-            idatAcc += chunkData
-            skip = True
-
-        # Removing CgBI chunk        
-        if chunkType == "CgBI":
-            skip = True
-
-        # Add all accumulated IDATA chunks
-        if chunkType == "IEND":
-            try:
-                # Uncompressing the image chunk
-                bufSize = width * height * 4 + height
-                chunkData = decompress( idatAcc, -15, bufSize)
-                
-            except Exception, e:
-                # The PNG image is normalized
-                print e
-                return None
-
-            chunkType = "IDAT"
-
-            # Swapping red & blue bytes for each pixel
-            newdata = ""
-            for y in xrange(height):
-                i = len(newdata)
-                newdata += chunkData[i]
-                for x in xrange(width):
-                    i = len(newdata)
-                    newdata += chunkData[i+2]
-                    newdata += chunkData[i+1]
-                    newdata += chunkData[i+0]
-                    newdata += chunkData[i+3]
-
-            # Compressing the image chunk
-            chunkData = newdata
-            chunkData = compress( chunkData )
-            chunkLength = len( chunkData )
-            chunkCRC = crc32(chunkType)
-            chunkCRC = crc32(chunkData, chunkCRC)
-            chunkCRC = (chunkCRC + 0x100000000) % 0x100000000
-            breakLoop = True
-
-        if not skip:
             newPNG += pack(">L", chunkLength)
             newPNG += chunkType
             if chunkLength > 0:
                 newPNG += chunkData
             newPNG += pack(">L", chunkCRC)
-        if breakLoop:
-            break
-        
+
+
+        # Parsing the image chunk
+        if chunkType == "IDAT":
+            # Uncompressing the image chunk
+            bufSize = width * height * 4 + height
+            ptr += len(chunkData)
+            chunkD.append(chunkData)
+
+        # Stopping the PNG file parsing
+        if chunkType == "IEND":
+            # Swapping red & blue bytes for each pixel
+            joinD = "".join(chunkD)
+            bufSize = width * height * 4 + height
+            try:
+                decompressD = decompress(joinD, -8, bufSize)
+
+                newdata = ""
+                for y in xrange(height):
+                    i = len(newdata)
+                    newdata += decompressD[i]
+                    for x in xrange(width):
+                        i = len(newdata)
+                        newdata += decompressD[i+2]
+                        newdata += decompressD[i+1]
+                        newdata += decompressD[i+0]
+                        newdata += decompressD[i+3]
+                DchunkData = compress(newdata)
+                DchunkLength = len(DchunkData)
+
+                DchunkCRC = crc32("IDAT")
+                DchunkCRC = crc32(DchunkData, DchunkCRC)
+                DchunkCRC = (DchunkCRC + 0x100000000) % 0x100000000
+                newPNG += pack(">L", DchunkLength)
+
+                # Compressing the image chunk
+                newPNG += "IDAT"
+                if DchunkLength > 0:
+                    newPNG += DchunkData
+                newPNG += pack(">L", DchunkCRC)
+            except error:
+                print "Could not process %s" % filename
+                pass
+
+
+
+            newPNG += pack(">L", chunkLength)
+            newPNG += chunkType
+            if chunkLength > 0:
+                newPNG += chunkData
+            newPNG += pack(">L", chunkCRC)
+
+
     return newPNG
 
 def updatePNG(filename):
     data = getNormalizedPNG(filename)
     if data != None:
-        file = open(filename, "wb")
+        print "Processing %s" % filename
+        file = open(filename, "w")
         file.write(data)
         file.close()
         return True
+    else:
+        print "Could not process %s" % filename
     return data
 
 
@@ -137,7 +147,7 @@ if len(sys.argv) <= 0:
     print "[!] Error: please specify path to a PNG file in argument"
     exit(1)
 
-if updatePNG(sys.argv[0]):
+if updatePNG(sys.argv[1]):
     exit(0)
 
 print "[!] Error: failed normalized PNG file"

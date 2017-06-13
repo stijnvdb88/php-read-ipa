@@ -6,21 +6,21 @@ IpaParser try to unzip ipa file, then read __Info.plist__ & uncrush __*.png__ to
     + uncrushed *.png to get icon app, class `PngUncrushed`
     + writing test, `phpunit`
     
-##How to use
+**How to use**
 
-    /*#instance of IpaParser
+    // instance of IpaParser
     $parser = new IpaParser("/path/to/file.ipa");
     
-    #getBasicInfo() return an array from Info.plist
-    #icon saved in ipa-info/app-icon.png
+    // getBasicInfo() return an array from Info.plist
+    // icon saved in ipa-info/app-icon.png
     $info = $parser->getBasicInfo();
 
-##Test
+**Test**
   
-    /*Run unit test by cmd:
+    // Run unit test by cmd:
     phpunit --bootstrap vendor/autoload.php test/ParseTest.php
     
-##Sample result
+**Sample result**
 Info.plist
 
     array (size=33)
