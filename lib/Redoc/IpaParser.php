@@ -17,6 +17,7 @@ class IpaParser {
     const IPIN_SCRIPT = "ipin.py";
 
     const PLIST = "Info.plist";
+    const PROVISION = "embedded.mobileprovision";
     const OUTPUT_DIR = "ipa-info";
     const OUTPUT_TEMP = "ipa-tmp";
     const APP_ICON = "app-icon.png";
@@ -44,6 +45,7 @@ class IpaParser {
     private $icon;
     /** @var  CFPropertyList */
     private $plist;
+    private $provision;
     private $extractFolder;
     private $parsed;
 
@@ -84,6 +86,7 @@ class IpaParser {
 
         $iconPath = $this->extractFolder . DIR_SEP . self::APP_ICON;
         $plistPath = $this->extractFolder . DIR_SEP . self::PLIST;
+        $provisionPath = $this->extractFolder . DIR_SEP . self::PROVISION;
 
         if ($this->parsed) {
             $shoudReparse = false;
@@ -106,7 +109,7 @@ class IpaParser {
             //unzip ipa, take out Info.plist and *.png
             $imgPattern = "*.png";
             $plistPattern = "Info.plist";       //*.plist
-            $provisionPattern = "*.mobileprovision";       //*.plist
+            $provisionPattern = "*.mobileprovision";       //*.mobileprovision
             $zipCommand = sprintf("%s x %s -aoa -o%s %s %s %s -r", self::ZIP, $this->ipaFilePath, $this->extractFolder, $imgPattern, $plistPattern, $provisionPattern);
             $this->cmd(self::ZIP, $zipCommand, ZipException::class);
 
@@ -141,6 +144,9 @@ class IpaParser {
 
             $this->moveFiles($fullAppFolder, $imgPattern);
 
+            //move embedded.mobileprovision outside
+            rename($this->extractFolder . DIR_SEP . "Payload" . DIR_SEP . $appFolder . DIR_SEP . self::PROVISION, $provisionPath);
+
             //PNG files
             $imgFiles = glob($fullAppFolder . DIR_SEP . $imgPattern);
             $imgFiles = array_merge($imgFiles, glob($this->extractFolder . DIR_SEP . $imgPattern));
@@ -165,11 +171,29 @@ class IpaParser {
         }
 
         //store plist
-        $this->plist = new CFPropertyList($plistPath);;
+        $this->plist = new CFPropertyList($plistPath);
 
         //store icon
         if (file_exists($iconPath))
             $this->icon = new Icon($iconPath);
+
+
+
+        if(file_exists($provisionPath)){
+
+            $fileRaw = file_get_contents($provisionPath);
+
+            $fileRaw = substr($fileRaw, strpos($fileRaw, '<?xml version="1.0" encoding="UTF-8"?>'));
+            $fileRaw = substr($fileRaw, 0, strpos($fileRaw, '</plist>') + strlen('</plist>'));
+
+            if(file_put_contents($provisionPath, $fileRaw)){
+
+                $provision = new CFPropertyList($provisionPath);
+
+                $this->provision = $provision;
+
+            }
+        }
     }
 
     /**
@@ -199,6 +223,10 @@ class IpaParser {
         return $this->plist;
     }
 
+    public function getProvision() {
+        return $this->provision;
+    }
+
     public function getBasicInfo() {
         $info = [];
         $plistArray = $this->plist->toArray();
@@ -206,29 +234,14 @@ class IpaParser {
         $info[self::VERSION_NAME] = $plistArray["CFBundleShortVersionString"];
         $info[self::VERSION_CODE] = $plistArray["CFBundleVersion"];
         $info[self::MIN_SDK] = $plistArray["MinimumOSVersion"];
-        $dateString = date("dMY H:iA", filemtime($this->ipaFilePath));
+        $dateString = date("Y-m-d H:i:s", filemtime($this->ipaFilePath));
         $info[self::DATE] = $dateString;
-        $info[self::RAW] = $plistArray;
 
         //App name
         if (isset($plistArray["CFBundleDisplayName"]))
             $info[self::APP_NAME] = $plistArray["CFBundleDisplayName"];
         else if (isset($plistArray["CFBundleName"]))
             $info[self::APP_NAME] = $plistArray["CFBundleName"];
-
-        //Icon
-        if ($this->icon)
-            $info[self::ICON_PATH] = $this->icon->getPath();
-
-        //Construct plist path
-        $absFilePath = "https://by.originally.us/beta/" . $this->ipaFilePath;
-        $plist_url = "https://by.originally.us/beta/common/" . "plist.php?f=" . $absFilePath;
-        $plist_url .= "&id=" . $info[self::BUNDLE_INDENTIFIER];
-        $plist_url .= "&v=" . $info[self::VERSION_NAME];
-        $plist_url .= "&n=" . $info[self::APP_NAME];
-
-        $href = "itms-services://?action=download-manifest&amp;url=" . urlencode($plist_url);
-        $info[self::HREF_PLIST] = $href;
 
         return $info;
     }
