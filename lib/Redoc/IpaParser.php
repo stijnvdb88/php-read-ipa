@@ -152,21 +152,25 @@ class IpaParser {
             $imgFiles = array_merge($imgFiles, glob($this->extractFolder . DIR_SEP . $imgPattern));
             asort($imgFiles);
 
+            //print_r($imgFiles);
             //Decode largest icon first
-            $i = count($imgFiles) - 1;
+            $i = 0;//count($imgFiles) - 1;
             $pngUncrushed = new PPngUncrush();
-            while ($i >= 0) {
-                $pngFile = realpath($imgFiles[$i]);
+            while ($i < count($imgFiles)-1) {
+                $pngFile = ($imgFiles[$i]);
                 $ipinCommand = sprintf("%s %s %s", self::PYTHON, __DIR__ . DIR_SEP . self::IPIN_SCRIPT, $pngFile);
-                $successDecode = $this->cmd(self::MV, $ipinCommand, Exception::class);
-                if (!$successDecode) {
-                    $i--;
-                    continue;
-                }
+                $split = explode('/', $pngFile);
+                $filename = $split[count($split)-1];
+                if(substr( $filename, 0, 7 ) == "AppIcon") // only do the app icons
+                {
+                    $successDecode = $this->cmd(self::MV, $ipinCommand, Exception::class);    
+                }                
+                $i++;
+                
 
                 //Move the normalized PNG file
-                rename($pngFile, $iconPath);
-                break;
+                //rename($pngFile, $iconPath);
+                //break;
             }
         }
 
