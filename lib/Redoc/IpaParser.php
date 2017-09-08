@@ -10,7 +10,6 @@ use CFPropertyList\CFPropertyList;
 use Exception;
 
 class IpaParser {
-    const ZIP = "7z";
     const MV = "mv";
     const RM = "rm";
     const PYTHON = "python";
@@ -110,8 +109,16 @@ class IpaParser {
             $imgPattern = "*.png";
             $plistPattern = "Info.plist";       //*.plist
             $provisionPattern = "*.mobileprovision";       //*.mobileprovision
-            $zipCommand = sprintf("%s x %s -aoa -o%s %s %s %s -r", self::ZIP, $this->ipaFilePath, $this->extractFolder, $imgPattern, $plistPattern, $provisionPattern);
-            $this->cmd(self::ZIP, $zipCommand, ZipException::class);
+            //$zipCommand = sprintf("%s x %s -aoa -o%s %s %s %s -r", self::ZIP, $this->ipaFilePath, $this->extractFolder, $imgPattern, $plistPattern, $provisionPattern);
+            //$this->cmd(self::ZIP, $zipCommand, ZipException::class);
+            $zip = new \ZipArchive();
+            $res = $zip->open($this->ipaFilePath);
+            if($res === TRUE)
+            {
+                $zip->extractTo($this->extractFolder);
+                $zip->close();
+            }
+
 
             //make sure it is extracted successfully
             if (!is_dir($this->extractFolder) || !file_exists($this->extractFolder)) {
